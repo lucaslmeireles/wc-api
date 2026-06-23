@@ -8,6 +8,7 @@ class StatusType {
   @Prop({ type: String }) name!: string;
   @Prop({ type: String }) description!: string;
   @Prop({ type: String }) shortDetail!: string;
+  @Prop({ type: String }) detail?: string;
 }
 
 @Schema({ _id: false })
@@ -75,6 +76,7 @@ class EventDetail {
 export class Match {
   @Prop({ type: String, required: true, unique: true }) id!: string;
   @Prop({ type: String }) uuid?: string;
+  @Prop({ type: String }) date?: string;
   @Prop({ type: String, required: true }) shortName!: string;
   @Prop({ type: MatchStatus, required: true }) status!: MatchStatus;
   @Prop({ type: MatchVenue, required: true }) venue!: MatchVenue;

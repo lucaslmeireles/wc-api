@@ -19,4 +19,9 @@ export class MatchesController {
   async getMatchesByStatus(@Param('status') status: string) {
     return this.matchesService.getMatchesByStatus(status);
   }
+
+  @Get('/rank')
+  async getRank() {
+    return this.matchesService.getRank();
+  }
 }

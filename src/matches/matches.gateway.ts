@@ -7,10 +7,11 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Match, MatchesService } from './matches.service';
+import { MatchesService } from './matches.service';
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
 import { instrument } from '@socket.io/admin-ui';
+import { Match } from 'src/types/match.type';
 
 type MatchEvent = {
   event: {

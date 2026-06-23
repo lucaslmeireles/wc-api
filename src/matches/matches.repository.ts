@@ -37,7 +37,9 @@ export class MatchesRepository {
 
   async getActiveAndScheduledMatches(): Promise<Match[]> {
     return this.matchModel
-      .find({ 'status.type.name': { $ne: 'STATUS_FULL_TIME' } })
+      .find({
+        'status.type.name': { $nin: ['STATUS_FULL_TIME', 'STATUS_CANCELED'] },
+      })
       .lean()
       .exec();
   }

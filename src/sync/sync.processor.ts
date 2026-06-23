@@ -2,7 +2,8 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { MatchesGateway } from 'src/matches/matches.gateway';
-import { Match, MatchesService } from 'src/matches/matches.service';
+import { MatchesService } from 'src/matches/matches.service';
+import { Match } from 'src/types/match.type';
 
 @Injectable()
 @Processor('matches')

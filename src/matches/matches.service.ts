@@ -1,121 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MatchesRepository } from './matches.repository';
-
-interface Athlete {
-  displayName: string;
-}
-
-interface EventDetail {
-  type: { text: string };
-  clock: { value: string };
-  team: { id: string };
-  athletesInvolved: Athlete[];
-  scoreValue?: number;
-  scoringPlay?: boolean;
-  redCard?: boolean;
-  yellowCard?: boolean;
-  penaltyKick?: boolean;
-}
-
-interface Competitor {
-  id: string;
-  name: string;
-  homeAway: string;
-  score: number;
-  team: {
-    abbreviation: string;
-    displayName: string;
-    color: string;
-    alternativeColor: string;
-    logo: string;
-  };
-}
-
-interface EventVenue {
-  fullName: string;
-  address: { city: string; country: string };
-}
-
-interface EventStatus {
-  clock: string;
-  displayClock: string;
-  period: number;
-  type: { name: string; description: string; shortDetail: string };
-}
-interface Event {
-  id: string;
-  uuid: string;
-  shortName: string;
-  competitions: Competition[];
-}
-interface Competition {
-  status: EventStatus;
-  venue: EventVenue;
-  competitors: Competitor[];
-  details: EventDetail[];
-}
+import {
+  Athlete,
+  Competitor,
+  Event,
+  EventDetail,
+  Match,
+} from 'src/types/match.type';
+import { StandingGroup } from 'src/types/rank.type';
 
 interface ApiResponse {
   leagues: Array<Array<unknown>>;
   events: Event[];
 }
 
-export interface Match {
-  id: string;
-  uuid?: string;
-  shortName: string;
-  status: {
-    clock: string;
-    displayClock: string;
-    period: number;
-    type: {
-      name: string;
-      description: string;
-      shortDetail: string;
-    };
-  };
-  venue: {
-    fullName: string;
-    city?: string;
-    country?: string;
-  };
-  teams: Array<{
-    id: string;
-    name: string;
-    homeAway: string;
-    score: number;
-    info: {
-      abbreviation: string;
-      displayName: string;
-      color: string;
-      alternativeColor: string;
-      logo: string;
-    };
-  }>;
-  match_info: Array<{
-    text: string;
-    time: string;
-    athletesInvolved: Array<{ displayName: string }>;
-    type: {
-      scoreValue?: number;
-      scoringPlay?: boolean;
-      redCard?: boolean;
-      yellowCard?: boolean;
-      penaltyKick?: boolean;
-    };
-    team: {
-      id: string;
-      homeAway: string;
-      score: number;
-      info: {
-        abbreviation: string;
-        displayName: string;
-        color: string;
-        alternativeColor: string;
-        logo: string;
-      };
-    };
-  }>;
+interface ApiResponseRank {
+  children: Array<Array<unknown>>;
 }
 
 @Injectable()
@@ -163,6 +63,23 @@ export class MatchesService {
     }
   }
 
+  async getRank(): Promise<StandingGroup> {
+    try {
+      const response = await fetch(
+        process.env.ESPN_API_URL ||
+          'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings',
+      );
+      const raw: unknown = await response.json();
+      const data: ApiResponseRank = raw as ApiResponseRank;
+      const ranks = this.extractRankings(data);
+      return ranks;
+    } catch (error) {
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error('Error fetching matches', stack);
+      throw new Error('Failed to fetch matches');
+    }
+  }
+
   async fetchMatchById(matchId: string): Promise<Match | null> {
     // a ESPN tem endpoint direto por evento
     // https://site.api.espn.com/apis/site/v2/sports/soccer/{league}/summary?event={id}
@@ -190,6 +107,7 @@ export class MatchesService {
         id: event.id,
         uuid: event.uuid || event.id,
         shortName: event.shortName,
+        date: event.date,
         status: {
           clock: competition.status.clock,
           displayClock: competition.status.displayClock,
@@ -198,6 +116,7 @@ export class MatchesService {
             name: competition.status.type.name,
             description: competition.status.type.description,
             shortDetail: competition.status.type.shortDetail,
+            detail: competition.status.type.detail ?? '',
           },
         },
         venue: {
@@ -403,5 +322,36 @@ export class MatchesService {
         };
       }),
     };
+  }
+
+  extractRankings(data: any) {
+    const children = data.children.map((c: any) => {
+      return {
+        id: c.id,
+        name: c.name,
+        teams: c.standings.entries.map((e: any) => {
+          const getStat = (name: string) =>
+            e.stats.find((s: any) => s.name === name)?.value ?? 0;
+
+          return {
+            name: e.team.displayName,
+            abbreviation: e.team.abbreviation,
+            logo: e.team.logos?.[0]?.href ?? '',
+            rank: e.note?.rank ?? 0,
+            color: e.note?.color ?? '',
+            description: e.note?.description ?? '',
+            gamesPlayed: getStat('gamesPlayed'),
+            wins: getStat('wins'),
+            losses: getStat('losses'),
+            draws: getStat('ties'),
+            points: getStat('points'),
+            goalsFor: getStat('pointsFor'),
+            goalsAgainst: getStat('pointsAgainst'),
+            goalDifference: getStat('pointDifferential'),
+          };
+        }),
+      };
+    });
+    return children;
   }
 }
